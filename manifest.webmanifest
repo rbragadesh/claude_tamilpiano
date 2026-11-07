@@ -1,0 +1,16 @@
+{
+  "name": "Isai Keys — learn keyboard with Tamil music",
+  "short_name": "Isai Keys",
+  "description": "Learn keyboard, chords and ragas with Western and Carnatic notation side by side. Build your own library from YouTube.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0F0B1F",
+  "theme_color": "#0F0B1F",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

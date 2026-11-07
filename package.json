@@ -1,0 +1,7 @@
+{
+  "name": "isai-keys",
+  "private": true,
+  "type": "module",
+  "description": "Learn keyboard with Tamil film-music style lessons — static PWA, no build step",
+  "scripts": { "test": "node tests/run.js" }
+}
