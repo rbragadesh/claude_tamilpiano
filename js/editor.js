@@ -1,6 +1,7 @@
 // Song editor: metadata, notes (Western or sargam, interchangeable), chords, MIDI import, YouTube link.
 import { buildSong, notesToText, suggestRagas, parseNotation, newId } from './notation.js';
 import { parseMidi, extractParts, partsToSong } from './midi.js';
+import { readMusicXml, parseMusicXml, asMidiLike } from './musicxml.js';
 import { RAGAS, RAGA_BY_ID, ALL_KEYS, noteName, keyTonicPc } from './theory.js';
 import { COMPOSERS } from './content.js';
 import { putSong } from './store.js';
@@ -64,7 +65,7 @@ export function openEditor(song, opts = {}) {
     <label class="f">Left hand notes (optional — overrides chords)</label>
     <textarea class="in" id="elh" spellcheck="false" autocapitalize="off" style="min-height:60px">${esc(src.lh)}</textarea>
     <div class="card" id="estatus" style="margin-top:12px"></div>
-    <div class="grid2"><button class="btn" id="eprev">${I.play} Preview</button><button class="btn ghost" id="emidi">♫ Import MIDI</button></div>
+    <div class="grid2"><button class="btn" id="eprev">${I.play} Preview</button><button class="btn ghost" id="emidi">♫ Import file</button></div>
     <details class="help"><summary>How to write notes</summary><pre>${esc(HELP)}</pre></details>
 
     <h2 class="sec">YouTube original (optional)</h2>
@@ -121,6 +122,7 @@ export function openEditor(song, opts = {}) {
     f('erh').value = res.rh; f('elh').value = res.lh; f('ech').value = '';
     f('ebpm').value = res.bpm; f('ekey').value = res.key; f('ets').value = res.ts.join('/');
     if (!f('etitle').value && res.name) f('etitle').value = res.name;
+    if (res.composer && !f('ecomp').value) { const c = COMPOSERS.find((x) => res.composer.toLowerCase().includes(x.toLowerCase().split(' ').pop())); if (c) f('ecomp').value = c; }
     refresh();
   });
   f('esave').onclick = async () => {
@@ -134,37 +136,51 @@ export function openEditor(song, opts = {}) {
   return el;
 }
 
-/** pick a .mid file, choose melody / bass tracks, return notation text */
+/** pick a MIDI or MusicXML (.mxl / .musicxml, e.g. exported from MuseScore) file, choose melody / bass parts, return notation text */
 export async function importMidiFlow(parentEl, onDone) {
-  const file = await pickFile('.mid,.midi,audio/midi,audio/x-midi');
+  const file = await pickFile(''); // no filter: iPhone greys out .mxl/.mid with a strict list
   if (!file) return;
-  let midi, parts;
-  try { midi = parseMidi(await file.arrayBuffer()); parts = extractParts(midi).filter((p) => p.count > 0); }
-  catch (e) { toast('Could not read that MIDI file: ' + e.message); return; }
+  let src, parts, meta = {};
+  try {
+    const buf = await file.arrayBuffer();
+    const head = new Uint8Array(buf.slice(0, 4));
+    const isMidi = /\.(mid|midi)$/i.test(file.name) || (head[0] === 0x4d && head[1] === 0x54 && head[2] === 0x68 && head[3] === 0x64) || (head[0] === 0x52 && head[1] === 0x49);
+    if (isMidi) { src = parseMidi(buf); parts = extractParts(src).filter((p) => p.count > 0); meta.kind = 'MIDI'; }
+    else {
+      const x = parseMusicXml(await readMusicXml(buf));
+      src = asMidiLike(x); parts = x.parts; meta = { kind: 'MusicXML', key: x.key, keyMode: x.keyMode, title: x.title, composer: x.composer, sections: x.sections };
+    }
+  } catch (e) { toast('Could not read that file: ' + e.message, 4000); return; }
   if (!parts.length) { toast('No notes found in that file'); return; }
   let rh = (parts.find((p) => p.guess === 'R') || parts[0]).id;
   let lh = (parts.find((p) => p.guess === 'L') || {}).id || '';
   const row = (p) => `<div class="toggle"><div><div class="tl">${esc(p.name)}${p.isDrum ? ' (drums)' : ''}</div><div class="ts">${p.count} notes · ${noteName(p.min)}–${noteName(p.max)}${p.poly > 0.3 ? ' · chords' : ''}</div></div>
      <div class="seg" data-part="${p.id}"><button data-r="R" class="${p.id === rh ? 'on' : ''}">Melody</button><button data-r="L" class="${p.id === lh ? 'on' : ''}">Bass</button></div></div>`;
-  const el = openLayer(`<div class="pad"><h2 style="margin:4px 0 4px">Choose tracks</h2><p class="note">${esc(file.name)} · ${parts.length} parts. Pick the melody (right hand) and optionally a bass part (left hand).</p>
+  const el = openLayer(`<div class="pad"><h2 style="margin:4px 0 4px">Choose parts</h2><p class="note">${esc(file.name)} · ${meta.kind} · ${parts.length} part${parts.length > 1 ? 's' : ''}. Pick the melody (right hand) and optionally a bass part (left hand).</p>
     <div class="card" style="margin-top:12px">${parts.map(row).join('')}</div>
-    <div class="toggle"><div class="tl">Snap timing to</div><div class="seg" id="mq"><button data-q="0.25" class="on">1/16</button><button data-q="0.5">1/8</button><button data-q="0">Off</button></div></div>
+    <div class="toggle"><div class="tl">Melody</div><div class="seg" id="mrs"><button data-v="1" class="on">Top note only</button><button data-v="0">Keep chords</button></div></div>
+    <div class="toggle"><div class="tl">Left hand</div><div class="seg" id="mls"><button data-v="1" class="on">Bass note only</button><button data-v="0">Full chords</button></div></div>
+    <div class="toggle"><div class="tl">Snap timing to</div><div class="seg" id="mq"><button data-q="0.25" class="${meta.kind === 'MIDI' ? 'on' : ''}">1/16</button><button data-q="0.5">1/8</button><button data-q="0" class="${meta.kind === 'MIDI' ? '' : 'on'}">Off</button></div></div>
     <div class="toggle"><div class="tl">Transpose</div><div class="seg" id="mt"><button data-t="-12">−8ve</button><button data-t="0" class="on">0</button><button data-t="12">+8ve</button></div></div>
-    <button class="btn primary" id="mok" style="width:100%;margin-top:12px">Use these tracks</button></div>`);
-  let q = 0.25, tr = 0;
+    <button class="btn primary" id="mok" style="width:100%;margin-top:12px">Use these parts</button></div>`);
+  let q = meta.kind === 'MIDI' ? 0.25 : 0, tr = 0, skR = true, skL = true;
   $$('[data-part]', el).forEach((g) => g.onclick = (e) => {
     const b = e.target.closest('button'); if (!b) return;
     const id = g.dataset.part;
     if (b.dataset.r === 'R') rh = rh === id ? '' : id; else lh = lh === id ? '' : id;
     $$('[data-part]', el).forEach((gg) => { $('[data-r="R"]', gg).classList.toggle('on', gg.dataset.part === rh); $('[data-r="L"]', gg).classList.toggle('on', gg.dataset.part === lh); });
   });
-  $('#mq', el).onclick = (e) => { const b = e.target.closest('button'); if (!b) return; q = +b.dataset.q; $$('button', $('#mq', el)).forEach((x) => x.classList.toggle('on', x === b)); };
-  $('#mt', el).onclick = (e) => { const b = e.target.closest('button'); if (!b) return; tr = +b.dataset.t; $$('button', $('#mt', el)).forEach((x) => x.classList.toggle('on', x === b)); };
+  const seg = (id, fn) => { $('#' + id, el).onclick = (e) => { const b = e.target.closest('button'); if (!b) return; $$('button', $('#' + id, el)).forEach((x) => x.classList.toggle('on', x === b)); fn(b); }; };
+  seg('mq', (b) => (q = +b.dataset.q)); seg('mt', (b) => (tr = +b.dataset.t));
+  seg('mrs', (b) => (skR = b.dataset.v === '1')); seg('mls', (b) => (skL = b.dataset.v === '1'));
   $('#mok', el).onclick = () => {
-    if (!rh && !lh) return toast('Pick at least one track');
-    const song = partsToSong(midi, parts, { rh, lh, quantize: q, transpose: tr, skylineRH: true, skylineLH: true });
-    const o = { key: song.key, ts: song.ts };
-    const res = { rh: notesToText(song.notes.filter((n) => n.h === 'R'), o), lh: notesToText(song.notes.filter((n) => n.h === 'L'), { ...o, hand: 'L' }), bpm: song.bpm, key: song.key, ts: song.ts, name: file.name.replace(/\.(mid|midi)$/i, '') };
+    if (!rh && !lh) return toast('Pick at least one part');
+    const song = partsToSong(src, parts, { rh, lh, quantize: q, transpose: tr, skylineRH: skR, skylineLH: skL });
+    const key = meta.key && tr % 12 === 0 ? meta.key : song.key;
+    const sections = (meta.sections || []).map((s) => ({ t: s.t - song.trimmedBeats, name: s.name })).filter((s) => s.t >= 0);
+    const o = { key, ts: song.ts };
+    const res = { rh: notesToText(song.notes.filter((n) => n.h === 'R'), { ...o, sections }), lh: notesToText(song.notes.filter((n) => n.h === 'L'), { ...o, hand: 'L' }),
+      bpm: song.bpm, key, ts: song.ts, name: meta.title || file.name.replace(/\.(mid|midi|mxl|musicxml|xml)$/i, ''), composer: meta.composer || '' };
     song.warnings.forEach((w) => toast(w, 4000));
     closeLayer(el); onDone(res);
   };

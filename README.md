@@ -20,7 +20,7 @@ Learn keyboard the way Simply Piano teaches it — scrolling sheet music, notes 
 - **Your own library** grouped by composer and era (70s to 2020s):
   - **From YouTube:** paste a link, mark the start and end of the part, then loop it and slow it down. Get the notes by *Listen & draft* (the mic transcribes a rough draft), *Play it in* (you play it and the app writes it down) or *Type*. The original clip then plays as your backing track.
   - **Type or paste notes** in Western or sargam, with one-tap conversion between them.
-  - **Import a MIDI file** and pick the melody and bass tracks.
+  - **Import MusicXML (.mxl / .musicxml) or MIDI**, for example a score you downloaded from MuseScore (Download → MusicXML). Pick the melody and bass parts. Key, time signature, tempo, ties and rehearsal-mark sections come across.
 - Works offline once installed (except YouTube). Library backup and restore as a JSON file.
 
 ## Turn on GitHub Pages (one time)
@@ -75,6 +75,7 @@ node tests/catalog.test.js     # all 319 practice-library items parse cleanly
 | `js/theory.js` | note spelling, sargam, ragas, chords, key detection |
 | `js/notation.js` | Western/Carnatic text notation ⇄ notes |
 | `js/midi.js` | Standard MIDI File import |
+| `js/musicxml.js` | MusicXML / compressed .mxl import |
 | `js/detector.js` | mic pitch (YIN), chord check, onsets, transcription helpers |
 | `js/player.js` | Wait / Play / Listen engine and scoring |
 | `js/staff.js`, `js/falling.js`, `js/keyboard.js` | renderers |

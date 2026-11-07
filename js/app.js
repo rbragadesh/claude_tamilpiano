@@ -217,7 +217,8 @@ function openAddSheet() {
     <button class="btn primary" id="a_yt" style="justify-content:flex-start">▶ From a YouTube link</button>
     <p class="note" style="margin:-4px 4px 4px">Mark the part to learn, then draft the notes by listening, play them in, or type them.</p>
     <button class="btn" id="a_txt" style="justify-content:flex-start">✎ Type or paste notes (Western or sargam)</button>
-    <button class="btn" id="a_midi" style="justify-content:flex-start">♫ Import a MIDI file</button>
+    <button class="btn" id="a_midi" style="justify-content:flex-start">♫ Import MusicXML or MIDI (e.g. from MuseScore)</button>
+    <p class="note" style="margin:-4px 4px 4px">On MuseScore: open the score → Download → <b>MusicXML</b> (best) or MIDI, then pick the file here.</p>
     <button class="btn ghost" id="a_bak" style="justify-content:flex-start">⤓ Restore a library backup</button></div></div>`);
   $('#a_yt', el).onclick = () => { closeLayer(el); openStudio({ onSaved: () => render() }); };
   $('#a_txt', el).onclick = () => { closeLayer(el); openEditor(null, { onSaved: () => render() }); };
@@ -364,7 +365,7 @@ function settingsHTML() {
   <p style="margin-top:8px">On iPhone: open in Safari → Share → <b>Add to Home Screen</b>. If you hear nothing, check the silent switch.</p></div>
   </div>`;
 }
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.2.0';
 
 // ---------- bindings ----------
 function bindScreen() {

@@ -1,9 +1,9 @@
 // Offline support: cache the app shell; serve cached files instantly and refresh them in the background.
-const VERSION = 'isai-keys-v1.1.0';
+const VERSION = 'isai-keys-v1.2.0';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/audio.js', 'js/catalog.js', 'js/content.js', 'js/detector.js', 'js/editor.js', 'js/falling.js', 'js/keyboard.js',
-  'js/midi.js', 'js/notation.js', 'js/player.js', 'js/staff.js', 'js/store.js', 'js/studio.js', 'js/theory.js', 'js/ui.js', 'js/youtube.js',
+  'js/midi.js', 'js/musicxml.js', 'js/notation.js', 'js/player.js', 'js/staff.js', 'js/store.js', 'js/studio.js', 'js/theory.js', 'js/ui.js', 'js/youtube.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/maskable-512.png',
 ];
 self.addEventListener('install', (e) => {
