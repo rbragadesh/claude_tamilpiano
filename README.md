@@ -10,6 +10,12 @@ Learn keyboard the way Simply Piano teaches it — scrolling sheet music, notes 
 - **Three practice modes:** *Wait* (the song waits until you play the right note or chord), *Play* (in time, scored Perfect / Early / Late / Miss) and *Listen*.
 - **Listens through the microphone** to your real keyboard — single notes and chords. You can also tap the on-screen keys. On a laptop, a MIDI keyboard works too.
 - **Two views:** sheet music (grand staff, key signatures, chord names, a sargam line) or falling notes.
+- **Practice library: 319 pieces that unlock level by level** as you finish course units (Level 1 Beginner → Level 7 Raga player). There's also an *Unlock everything* switch in Settings.
+  - 195 traditional exercises: sarali varisai 1–4, janta varisai and all seven sapta-tala alankarams, generated in 18 ragas. Patterns follow the NIOS / NCERT Carnatic syllabus.
+  - 24 original film-style songs across 17 ragas, with chords.
+  - 75 chord-progression drills: 15 progressions, including raga-flavoured ones (Kalyani II, Harikambhoji ♭VII, Keeravani i–iv–V), in four keys each.
+  - 24 scales (12 major, 12 minor), with fingering where it's standard.
+  - The geetham *Sri Gananatha* (Purandara Dasa, Malahari).
 - **Raga explorer** with any Sa, scale playback, a tanpura drone, and Western equivalents.
 - **Your own library** grouped by composer and era (70s to 2020s):
   - **From YouTube:** paste a link, mark the start and end of the part, then loop it and slow it down. Get the notes by *Listen & draft* (the mic transcribes a rough draft), *Play it in* (you play it and the app writes it down) or *Type*. The original clip then plays as your backing track.
@@ -50,7 +56,7 @@ Sections: a line starting with #   e.g.  # Pallavi
 - **Listen & draft is a rough draft.** A film mix (voice, orchestra, gamakas) can't be turned into exact notes automatically. Expect to fix notes by hand, or use *Play it in*. It works best on clear melody lines and when the video plays from a separate speaker or laptop.
 - **YouTube:** some uploads block embedding. If yours does, try another upload of the same song. iPhone may need you to tap ▶ on the video once before the app can start it. With the mic on and the original playing through the speaker, use **wired headphones** so the app only hears you.
 - **Storage:** your library lives on the device (IndexedDB). Use *Settings → Export backup* now and then.
-- **Copyright:** lesson melodies are traditional Carnatic exercises or originals written for this app. Keep your film-song transcriptions in your own on-device library, and don't commit them to this public repo.
+- **Copyright:** the course and practice library contain only traditional Carnatic material, generated drills and originals written for this app. No film-song melodies are included. Keep your film-song transcriptions in your own on-device library, and don't commit them to this public repo.
 
 ## Development
 
@@ -61,6 +67,7 @@ python3 -m http.server 8000   # then open http://localhost:8000
 npm test                       # parser, MIDI and theory tests (Node 18+)
 node tests/detector.test.js    # pitch / chord detection on synthetic piano tones
 node tests/content.test.js     # every built-in lesson parses cleanly
+node tests/catalog.test.js     # all 319 practice-library items parse cleanly
 ```
 
 | File | Purpose |
@@ -73,5 +80,6 @@ node tests/content.test.js     # every built-in lesson parses cleanly
 | `js/staff.js`, `js/falling.js`, `js/keyboard.js` | renderers |
 | `js/studio.js`, `js/youtube.js` | YouTube studio and player sync |
 | `js/editor.js` | song editor |
-| `js/content.js` | course and practice pieces |
+| `js/content.js` | course and original pieces |
+| `js/catalog.js` | practice library generator and level system |
 | `js/app.js` | screens and navigation |

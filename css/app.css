@@ -200,3 +200,15 @@ canvas.cap { width: 100%; height: 120px; background: #0B0817; border-radius: 12p
 details.help { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; margin-top: 10px; }
 details.help summary { font-weight: 800; cursor: pointer; }
 details.help pre { white-space: pre-wrap; font-size: 13px; color: var(--muted); line-height: 1.5; margin: 8px 0 0; font-family: ui-monospace, Menlo, monospace; }
+
+/* levels & practice library */
+.lvbadge { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; font-size: 28px; font-weight: 900; color: #1d1300; background: linear-gradient(135deg, var(--gold), var(--gold2)); flex: none; box-shadow: 0 6px 24px rgba(255,138,0,.3); }
+.card.lvl { background: linear-gradient(135deg, #2a1d55, #1a1433); border-color: rgba(255,182,39,.3); }
+.bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); margin-top: 10px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold2)); border-radius: 4px; }
+.lockrow { opacity: .85; } .lockrow b { font-size: 15px; } .lockico { font-size: 22px; width: 44px; text-align: center; }
+.art.cat-songs { background: linear-gradient(135deg, #FFB627, #FF8A00); }
+.art.cat-varisai { background: linear-gradient(135deg, #B794F6, #7C3AED); font-family: "Tamil Sangam MN", "Noto Sans Tamil", var(--font); }
+.art.cat-chords { background: linear-gradient(135deg, #2EC4B6, #0E7C74); }
+.art.cat-scales { background: linear-gradient(135deg, #F6F1E7, #CFC6B4); }
+.art.cat-geetham { background: linear-gradient(135deg, #FF5A5F, #C2410C); font-family: "Tamil Sangam MN", "Noto Sans Tamil", var(--font); }

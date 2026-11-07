@@ -33,7 +33,7 @@ export class Engine {
     this.bpb = beatsPerBar(song.ts);
     this.sa = this.settings.saMode === 'C' ? 0 : song.sa ?? 0;
     this.staff.setSong(song); this.fall.setSong(song);
-    this.kb.labels = this.settings.labels; this.kb.sa = this.sa; this.kb.raga = this.staff.raga; this.kb.sig = this.staff.sig; this.kb.spellPref = song.spelling || null;
+    this.kb.labels = this.settings.labels; this.kb.sa = this.sa; this.kb.raga = this.staff.raga; this.kb.sig = this.staff.sig; this.kb.spellPref = song.spelling || null; this.kb.letterMap = this.staff.letterMap;
     this.setView(this.view);
     this.prepare();
     this.status = 'ready'; this.onStatus('ready');

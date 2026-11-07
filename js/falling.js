@@ -42,7 +42,7 @@ export class FallingView {
       g.shadowBlur = 0;
       if (st.labels !== 'none' && y0 - y1 > 16 && sp.w >= 12) {
         g.fillStyle = '#16112B'; g.font = `800 ${Math.min(13, sp.w * 0.5)}px ui-rounded, system-ui`; g.textAlign = 'center';
-        const lab = st.labels === 'sargam' ? swaraName(n.m, st.sa, this.raga)[0] : spelledName(n.m, this.sig, this.song.spelling);
+        const lab = st.labels === 'sargam' ? swaraName(n.m, st.sa, this.raga)[0] : spelledName(n.m, this.sig, this.song.spelling, false, this.kb.letterMap);
         g.fillText(lab, sp.x + sp.w / 2, y0 - 6);
         if (st.labels === 'both' && y0 - y1 > 32) { g.fillStyle = 'rgba(22,17,43,0.6)'; g.font = `700 ${Math.min(11, sp.w * 0.4)}px ui-rounded, system-ui`; g.fillText(swaraLabel(n.m, st.sa, this.raga, false), sp.x + sp.w / 2, y0 - 21); }
       }

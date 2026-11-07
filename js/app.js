@@ -1,6 +1,7 @@
 // Isai Keys — app shell: tabs, lessons, library, practice tools, settings and the player screen.
 import { loadSettings, saveSettings, loadProgress, recordResult, streak, allSongs, deleteSong, putSong, exportLibrary, importLibrary, requestPersistence, saveProgress } from './store.js';
 import { UNITS, ALL_LESSONS, BUILTIN_SONGS, COMPOSERS, eraOf, ragaScaleSong, chordDrill, chordDrillRH } from './content.js';
+import { catalog, CATS, LEVELS, levelInfo } from './catalog.js';
 import { RAGAS, RAGA_BY_ID, COMMON_CHORDS, SHARP, FLAT, swaraLabel, spelledName, noteName, pc, beatsPerBar, swaraName } from './theory.js';
 import { Engine } from './player.js';
 import { Keyboard } from './keyboard.js';
@@ -51,7 +52,7 @@ function learnHTML() {
   <div class="hero"><div class="kolam"></div>
     <h1><span class="ta">இசை</span>Isai Keys</h1>
     <p>Keyboard, chords and ragas — Western and Carnatic side by side.</p>
-    <div class="pills"><span class="pill">🔥 <b>${streak()}</b> day streak</span><span class="pill">★ <b>${got}</b> / ${total}</span></div>
+    <div class="pills"><span class="pill">🔥 <b>${streak()}</b> day streak</span><span class="pill">★ <b>${got}</b> / ${total}</span><span class="pill">Level <b>${levelInfo(S.settings).level}</b> · ${esc(levelInfo(S.settings).name)}</span></div>
   </div>
   <button class="card row gap" data-lesson="${next.id}" style="width:100%;text-align:left;background:linear-gradient(135deg,#2a1d55,#1a1433);border-color:rgba(255,182,39,.35)">
     <div class="grow"><div class="note" style="color:var(--gold);font-weight:800">${got ? 'CONTINUE' : 'START HERE'}</div><h3 style="margin-top:2px">${esc(next.title)}</h3><p>${esc(next.unit.title)}</p></div>
@@ -115,6 +116,7 @@ export function miniKeyboard(cv, keys = [], { raga = null, sa = 0, lo, hi } = {}
 function runLesson(lesson, idx, results) {
   const ex = lesson.exercises[idx];
   const last = idx === lesson.exercises.length - 1;
+  const lvBefore = levelInfo(S.settings).earned;
   openPlayer(ex.song, { mode: ex.mode, hands: ex.hands, tempo: ex.tempo, labels: ex.labels, title: lesson.exercises.length > 1 && ex.title !== lesson.title ? `${lesson.title} · ${ex.title}` : lesson.title,
     nextLabel: last ? 'Finish' : 'Next exercise',
     onResult: (res) => { recordResult('E:' + lesson.id + ':' + idx, res); },
@@ -125,7 +127,11 @@ function runLesson(lesson, idx, results) {
       else {
         const st = Math.max(1, Math.round(results.reduce((a, r) => a + (r ? r.stars : 0), 0) / lesson.exercises.length));
         recordResult('L:' + lesson.id, { stars: st, score: 1 });
-        toast(`Lesson complete ${'★'.repeat(st)}`);
+        const li = levelInfo(S.settings);
+        if (li.earned > lvBefore) {
+          const n = catalog().filter((x) => x.level === li.earned).length;
+          toast(`Level up! Level ${li.earned} · ${LEVELS[li.earned - 1].name} — ${n} new pieces unlocked in Practice`, 4500);
+        } else toast(`Lesson complete ${'★'.repeat(st)}`);
         if (S.tab === 'learn') render();
       }
     } });
@@ -151,8 +157,7 @@ async function songsHTML() {
     ${list.length ? list.map(songRow).join('') : user.length ? '<div class="empty">No songs match.</div>' : `<div class="card empty">
       <div style="font-size:40px">🎹</div><h3>Build your library</h3>
       <p class="note">Paste a YouTube link of any Ilaiyaraaja, Rahman, Harris, Yuvan, Bharathwaj or Vidyasagar song, mark the part you want to learn, then let the app draft the notes or play them in yourself. You can also paste notes you found (Western or sargam) or import a MIDI file.</p></div>`}
-    <h2 class="sec">Practice pieces (original & traditional)</h2>
-    ${BUILTIN_SONGS.map(songRow).join('')}
+    <button class="card row gap" id="toPractice" style="width:100%;text-align:left;margin-top:18px"><div class="grow"><h3>Practice library</h3><p>${catalog().length} original songs, varisai, alankarams, chord progressions and scales — they unlock as you level up.</p></div><span class="icon">${I.play}</span></button>
   </div>`;
 }
 const hue = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
@@ -164,6 +169,7 @@ function songRow(s) {
     <span class="st"><div class="t1">${esc(s.title)}</div><div class="t2">${esc(meta)}</div></span>${prog ? stars(prog.stars) : ''}</button>`;
 }
 function findSong(id) { return libCache.find((s) => s.id === id) || BUILTIN_SONGS.find((s) => s.id === id); }
+const catFilter = { cat: 'all', raga: null };
 
 function openSongSheet(song) {
   const bpb = beatsPerBar(song.ts);
@@ -224,11 +230,35 @@ function openAddSheet() {
 
 // ---------- Practice ----------
 function practiceHTML() {
-  return `<div class="wrap"><div class="hero" style="padding-bottom:8px"><h1>Practice</h1><p>Ragas, chords, drone and a microphone check.</p></div>
+  const li = levelInfo(S.settings);
+  const prog = loadProgress();
+  const all = catalog();
+  const unlocked = all.filter((x) => x.level <= li.level).length;
+  const nextCount = li.next ? all.filter((x) => x.level === li.next.n).length : 0;
+  const cats = [['all', 'All', all.length], ...CATS.map((c) => [c.id, c.name, all.filter((x) => x.cat === c.id).length])];
+  let items = catFilter.cat === 'all' ? all : all.filter((x) => x.cat === catFilter.cat);
+  const ragasHere = catFilter.cat === 'varisai' ? [...new Set(items.map((x) => x.raga))] : [];
+  if (catFilter.raga && ragasHere.includes(catFilter.raga)) items = items.filter((x) => x.raga === catFilter.raga);
+  const groups = LEVELS.map((L) => ({ L, items: items.filter((x) => x.level === L.n) })).filter((g) => g.items.length);
+  const glyph = { songs: '♪', varisai: 'ஸ', chords: '♯', scales: '↗', geetham: 'ௐ' };
+  const row = (x) => { const st = (prog['S:' + x.id] || {}).stars || 0;
+    return `<button class="song" data-item="${esc(x.id)}"><span class="art cat-${x.cat}">${glyph[x.cat]}</span><span class="st"><div class="t1">${esc(x.title)}</div><div class="t2">${esc(x.sub)}</div></span>${st ? stars(st) : ''}</button>`; };
+  return `<div class="wrap"><div class="hero" style="padding-bottom:8px"><h1>Practice</h1><p>Ragas, chords and a library that grows as you level up.</p></div>
+  <div class="card lvl"><div class="row gap"><div class="lvbadge">${li.level}</div><div class="grow">
+    <div class="note" style="color:var(--gold);font-weight:800">LEVEL ${li.level} · ${esc(li.name.toUpperCase())}${li.unlockAll ? ' · ALL UNLOCKED' : ''}</div>
+    <h3 style="margin-top:2px">${unlocked} of ${all.length} pieces unlocked</h3>
+    ${li.next && !li.unlockAll ? `<p>Finish <b>Unit ${li.next.unit + 1} · ${esc(li.nextUnit.title)}</b> in Learn to unlock ${nextCount} more.</p><div class="bar"><i style="width:${Math.round(li.unitProgress * 100)}%"></i></div>` : '<p>Everything is open — enjoy.</p>'}
+  </div></div></div>
   <div class="grid2"><button class="btn" id="micCheck">🎤 Mic check</button><button class="btn ${droneOn() ? 'teal' : ''}" id="drone">${droneOn() ? '■ Stop drone' : '♪ Tanpura drone'}</button></div>
+  <h2 class="sec">Practice library</h2>
+  <div class="chips">${cats.map(([id, name, n]) => `<button class="chip ${catFilter.cat === id ? 'on' : ''}" data-pcat="${id}">${esc(name)} · ${n}</button>`).join('')}</div>
+  ${ragasHere.length ? `<div class="chips">${[['', 'All ragas'], ...ragasHere.map((r) => [r, RAGA_BY_ID[r] ? RAGA_BY_ID[r].name : r])].map(([id, n]) => `<button class="chip ${(catFilter.raga || '') === id ? 'on' : ''}" data-praga="${id}">${esc(n)}</button>`).join('')}</div>` : ''}
+  ${groups.map(({ L, items: its }) => L.n <= li.level
+    ? `<h2 class="sec">Level ${L.n} · ${esc(L.name)} <span style="opacity:.6">· ${its.length}</span></h2>${its.map(row).join('')}`
+    : `<button class="card row gap lockrow" data-lock="${L.n}" style="width:100%;text-align:left"><span class="lockico">🔒</span><span class="grow"><b>Level ${L.n} · ${esc(L.name)}</b><div class="note">${its.length} pieces · unlock by finishing Unit ${L.unit + 1} · ${esc(UNITS[L.unit].title)}</div></span></button>`).join('')}
   <h2 class="sec">Ragas · ராகங்கள்</h2>
   <div class="ragas">${RAGAS.map((r) => `<button class="raga" data-raga="${r.id}"><b>${esc(r.name)}</b><span class="ta">${esc(r.ta)}</span><small>${esc(r.western)}</small></button>`).join('')}</div>
-  <h2 class="sec">Chord drills</h2>
+  <h2 class="sec">Custom chord drill</h2>
   <div class="card"><p>Pick the chords to drill. The app shows one per bar and waits until you play it.</p>
     <div class="chips" style="flex-wrap:wrap;margin-top:12px" id="chordPick">${COMMON_CHORDS.map((c) => `<button class="chip ${['C', 'F', 'G', 'Am'].includes(c) ? 'on' : ''}" data-ch="${c}">${c}</button>`).join('')}</div>
     <div class="grid2" style="margin-top:8px"><button class="btn primary" id="drillR">Right hand</button><button class="btn" id="drillL">Left hand</button></div></div>
@@ -315,6 +345,7 @@ function settingsHTML() {
     ${sw('autoOtherHand', 'Play the other hand for me', 'When practising one hand')}
     ${sw('metronome', 'Metronome in Play-along')}
     ${sw('notesWithOriginal', 'Play notes over the YouTube original', 'In Listen mode')}
+    ${sw('unlockAll', 'Unlock everything', 'Skip the level gates in the Practice library')}
   </div>
   <h2 class="sec">Sound & microphone</h2><div class="card">
     <label class="f">Piano volume</label><input type="range" min="0" max="1" step="0.05" value="${s.music}" data-rng="music">
@@ -333,7 +364,7 @@ function settingsHTML() {
   <p style="margin-top:8px">On iPhone: open in Safari → Share → <b>Add to Home Screen</b>. If you hear nothing, check the silent switch.</p></div>
   </div>`;
 }
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.0';
 
 // ---------- bindings ----------
 function bindScreen() {
@@ -344,6 +375,11 @@ function bindScreen() {
   $$('[data-comp]', screen).forEach((b) => b.onclick = () => { S.filter.composer = b.dataset.comp === 'All' ? null : b.dataset.comp; render(); });
   $$('[data-era]', screen).forEach((b) => b.onclick = () => { S.filter.era = b.dataset.era === 'Any era' ? null : b.dataset.era; render(); });
   $$('[data-raga]', screen).forEach((b) => b.onclick = () => openRaga(b.dataset.raga));
+  $$('[data-pcat]', screen).forEach((b) => b.onclick = () => { catFilter.cat = b.dataset.pcat; catFilter.raga = null; render(); });
+  $$('[data-praga]', screen).forEach((b) => b.onclick = () => { catFilter.raga = b.dataset.praga || null; render(); });
+  $$('[data-item]', screen).forEach((b) => b.onclick = () => { const it = catalog().find((x) => x.id === b.dataset.item); if (it) openSongSheet(it.build()); });
+  $$('[data-lock]', screen).forEach((b) => b.onclick = () => { const L = LEVELS[+b.dataset.lock - 1]; toast(`Unlocks at Level ${L.n} — finish Unit ${L.unit + 1} · ${UNITS[L.unit].title} in Learn (or turn on "Unlock everything" in Settings)`, 4000); });
+  const tp = $('#toPractice', screen); if (tp) tp.onclick = () => { S.tab = 'practice'; render(); screen.scrollTop = 0; };
   const mc = $('#micCheck', screen) || $('#micCheck2', screen); if (mc) mc.onclick = openMicCheck;
   const dr = $('#drone', screen); if (dr) dr.onclick = async () => { await unlockAudio(); if (droneOn()) stopDrone(); else startDrone(48); render(); };
   const cp = $('#chordPick', screen); if (cp) cp.onclick = (e) => { const b = e.target.closest('button'); if (b) b.classList.toggle('on'); };

@@ -71,7 +71,7 @@ export class Keyboard {
   flashKey(m, color, ms = 350) { this.flash.set(m, { color, until: performance.now() + ms }); }
 
   label(m) {
-    const west = spelledName(m, this.sig, this.spellPref);
+    const west = spelledName(m, this.sig, this.spellPref, false, this.letterMap);
     const sw = swaraLabel(m, this.sa, this.raga, false);
     if (this.labels === 'letters') return [west];
     if (this.labels === 'sargam') return [sw];

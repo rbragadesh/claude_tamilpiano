@@ -1,5 +1,5 @@
 // Scrolling sheet-music view (Simply Piano style): grand staff, fixed playhead, notes slide right→left.
-import { spell, keySigCount, keyAccidentalMap, KEYSIG_STEPS, swaraLabel, swaraName, beatsPerBar, RAGA_BY_ID } from './theory.js';
+import { spell, keySigCount, keyAccidentalMap, KEYSIG_STEPS, swaraLabel, swaraName, beatsPerBar, RAGA_BY_ID, ragaLetterMap, keyLetter, keyTonicPc } from './theory.js';
 import { COLORS, roundRect } from './keyboard.js';
 
 const TREBLE_TOP = 38, BASS_TOP = 26; // diatonic step of the top staff line (F5 / A3)
@@ -28,12 +28,13 @@ export class StaffView {
     this.sig = keySigCount(song.key);
     this.pref = song.spelling || null;
     this.raga = song.raga ? RAGA_BY_ID[song.raga] : null;
+    this.letterMap = this.raga && !song.spelling ? ragaLetterMap(this.raga, song.sa ?? keyTonicPc(song.key), keyLetter(song.key)) : null;
     this.bpb = beatsPerBar(song.ts);
     const kmap = keyAccidentalMap(this.sig);
     const staffOf = (n) => (this.grand ? (n.h === 'L' ? 'bass' : 'treble') : this.hasR ? 'treble' : 'bass');
     // per-note layout info
     this.info = notes.map((n, i) => {
-      const sp = spell(n.m, this.sig, this.pref);
+      const sp = spell(n.m, this.sig, this.pref, this.letterMap);
       return { i, n, sp, staff: staffOf(n), ht: headType(n.d), acc: null, xoff: 0, stem: 0 };
     });
     // accidentals per measure & staff
@@ -238,7 +239,7 @@ export class StaffView {
     const nowMs = performance.now();
     (st.ghosts || []).forEach((gh) => {
       if (gh.until < nowMs) return;
-      const sp = spell(gh.m, this.sig, this.pref);
+      const sp = spell(gh.m, this.sig, this.pref, this.letterMap);
       const staff = this.grand ? (gh.m >= 60 ? 'treble' : 'bass') : this.hasR ? 'treble' : 'bass';
       const y = this.y(sp.step, staff, G);
       g.globalAlpha = Math.min(1, (gh.until - nowMs) / 250);

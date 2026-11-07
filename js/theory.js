@@ -69,10 +69,16 @@ const NEUTRAL_SPELL = { 1: ['C', 1], 3: ['E', -1], 6: ['F', 1], 8: ['G', 1], 10:
  * @param {'sharp'|'flat'|null} prefer optional override for black keys
  * @returns {{letter:string, acc:number, octave:number, step:number}} step = diatonic index (C4 = 28)
  */
-export function spell(m, sig = 0, prefer = null) {
+export function spell(m, sig = 0, prefer = null, letterMap = null) {
   const p = pc(m);
   const kmap = keyAccidentalMap(sig);
   let letter = null, acc = 0;
+  if (letterMap && letterMap[p]) {
+    letter = letterMap[p];
+    acc = ((p - LETTER_PC[letter] + 18) % 12) - 6; // -2..+2
+    const octave = Math.round((m - (LETTER_PC[letter] + acc)) / 12) - 1;
+    return { letter, acc, octave, step: octave * 7 + LETTERS.indexOf(letter) };
+  }
   // 1) a letter that the key signature already alters to this pitch
   for (const l of LETTERS) {
     if (kmap[l] && pc(LETTER_PC[l] + kmap[l]) === p) { letter = l; acc = kmap[l]; break; }
@@ -92,8 +98,8 @@ export function spell(m, sig = 0, prefer = null) {
   return { letter, acc, octave, step: octave * 7 + LETTERS.indexOf(letter) };
 }
 
-export function spelledName(m, sig = 0, prefer = null, withOctave = false) {
-  const s = spell(m, sig, prefer);
+export function spelledName(m, sig = 0, prefer = null, withOctave = false, letterMap = null) {
+  const s = spell(m, sig, prefer, letterMap);
   const a = s.acc === 1 ? '♯' : s.acc === -1 ? '♭' : s.acc === 2 ? '𝄪' : '';
   return s.letter + a + (withOctave ? s.octave : '');
 }
@@ -151,6 +157,8 @@ export const RAGAS = [
     about: 'Like Mayamalavagowla in the lower half but with a natural Dha and flat Ni. Devotional and soothing.' },
   { id: 'simhendramadhyamam', name: 'Simhendramadhyamam', ta: 'சிம்மேந்திரமத்யமம்', mela: 57, semis: [0, 2, 3, 6, 7, 8, 11], swaras: ['S', 'R2', 'G2', 'M2', 'P', 'D1', 'N3'], western: 'Hungarian minor',
     about: 'Harmonic minor with a raised Ma. Exotic and intense.' },
+  { id: 'malahari', name: 'Malahari', ta: 'மலஹரி', parent: 'Mayamalavagowla', noEx: true, semis: [0, 1, 4, 5, 7, 8], swaras: ['S', 'R1', 'G3', 'M1', 'P', 'D1'], western: 'Asymmetric: up C D♭ F G A♭, down adds E',
+    about: 'Arohanam S R1 M1 P D1 Ṡ, avarohanam Ṡ D1 P M1 G3 R1 S. The raga of the first geethams every Carnatic student learns, starting with Sri Gananatha.' },
   { id: 'mohanam', name: 'Mohanam', ta: 'மோகனம்', parent: 'Harikambhoji', semis: [0, 2, 4, 7, 9], swaras: ['S', 'R2', 'G3', 'P', 'D2'], western: 'Major pentatonic',
     about: 'Five notes, no Ma and no Ni — the black-key pentatonic sound. Joyful and impossible to play "wrong". Found in a huge number of film songs across every decade.' },
   { id: 'hindolam', name: 'Hindolam', ta: 'ஹிந்தோளம்', parent: 'Natabhairavi', semis: [0, 3, 5, 8, 10], swaras: ['S', 'G2', 'M1', 'D1', 'N2'], western: 'Minor pentatonic with ♭6 (no 2nd, no 5th)',
@@ -239,3 +247,16 @@ export function detectKey(notes) {
 }
 
 export const beatsPerBar = (ts) => (ts && ts.length === 2 ? ts[0] * (4 / ts[1]) : 4);
+
+/** For a raga song: map each raga pitch-class to the letter of its swara (S R G M P D N = consecutive letters from Sa). */
+export function ragaLetterMap(raga, saPc = 0, saLetter = null) {
+  if (!raga) return null;
+  const letters = LETTERS;
+  const base = saLetter ? letters.indexOf(saLetter) : letters.indexOf(spell(60 + saPc).letter);
+  const order = { S: 0, R: 1, G: 2, M: 3, P: 4, D: 5, N: 6 };
+  const map = {};
+  raga.semis.forEach((s, i) => { map[pc(saPc + s)] = letters[(base + order[raga.swaras[i][0]]) % 7]; });
+  return map;
+}
+/** letter of a key's tonic as written ("Bb" -> "B", "F#m" -> "F") */
+export const keyLetter = (key) => String(key || 'C')[0].toUpperCase();
